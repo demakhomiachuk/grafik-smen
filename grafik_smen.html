@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>График смен магазина</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f4f0;
+    color: #1a1a18;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  .header { margin-bottom: 20px; }
+  .header h1 { font-size: 22px; font-weight: 600; color: #1a1a18; }
+  .header p { font-size: 14px; color: #6b6b68; margin-top: 4px; }
+  .month-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .month-tab {
+    padding: 8px 22px;
+    border-radius: 8px;
+    border: 1px solid #cccbc4;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b6b68;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .month-tab.active {
+    background: #1a1a18;
+    color: #fff;
+    border-color: #1a1a18;
+  }
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid #dddcd5;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; table-layout: auto; }
+  th {
+    background: #f5f4f0;
+    color: #6b6b68;
+    font-weight: 500;
+    font-size: 11px;
+    padding: 8px 4px;
+    text-align: center;
+    border-bottom: 1px solid #dddcd5;
+    border-right: 1px solid #e8e7e1;
+  }
+  th.name-col { text-align: left; padding-left: 14px; min-width: 100px; }
+  .day-num { font-size: 10px; color: #9b9a97; line-height: 1; margin-bottom: 2px; }
+  .day-d { font-size: 13px; font-weight: 500; }
+  td {
+    padding: 7px 3px;
+    text-align: center;
+    border-bottom: 1px solid #e8e7e1;
+    border-right: 1px solid #e8e7e1;
+    vertical-align: middle;
+  }
+  td.name-cell {
+    text-align: left;
+    padding-left: 14px;
+    font-weight: 500;
+    font-size: 14px;
+    color: #1a1a18;
+    border-right: 1px solid #cccbc4;
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  td:last-child, th:last-child { border-right: none; }
+  .cb-wrap { display: flex; justify-content: center; align-items: center; }
+  input[type=checkbox] {
+    width: 17px; height: 17px;
+    cursor: pointer;
+    accent-color: #1D9E75;
+    border-radius: 4px;
+  }
+  .weekend { background: #f9f9f7; }
+  td.weekend { background: #f9f9f7; }
+  th.weekend { background: #eeede8; }
+  .stats-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .stat-card {
+    background: #fff;
+    border: 1px solid #dddcd5;
+    border-radius: 10px;
+    padding: 10px 18px;
+    flex: 1;
+    min-width: 80px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .stat-label { font-size: 12px; color: #6b6b68; margin-bottom: 3px; }
+  .stat-val { font-size: 22px; font-weight: 600; color: #1a1a18; }
+  .worker-name { display: flex; align-items: center; gap: 8px; }
+  .avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .av0 { background: #E1F5EE; color: #0F6E56; }
+  .av1 { background: #E6F1FB; color: #185FA5; }
+  .av2 { background: #FBEAF0; color: #993556; }
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #6b6b68;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-box { width: 14px; height: 14px; border-radius: 3px; }
+  .legend-box.wknd { background: #f9f9f7; border: 1px solid #dddcd5; }
+  .legend-box.work { background: #fff; border: 1px solid #cccbc4; }
+  .footer { margin-top: 32px; font-size: 12px; color: #9b9a97; text-align: center; }
+
+  @media (max-width: 500px) {
+    body { padding: 14px 8px 32px; }
+    .header h1 { font-size: 18px; }
+    .stat-val { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>График смен магазина</h1>
+    <p>Отметь галочками свои смены</p>
+  </div>
+
+  <div class="month-tabs">
+    <button class="month-tab active" onclick="switchMonth(0)">Май 2025</button>
+    <button class="month-tab" onclick="switchMonth(1)">Июнь 2025</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="scheduleTable"></table>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Ваня</div><div class="stat-val" id="s0">0</div></div>
+    <div class="stat-card"><div class="stat-label">Веня</div><div class="stat-val" id="s1">0</div></div>
+    <div class="stat-card"><div class="stat-label">Алина</div><div class="stat-val" id="s2">0</div></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-box wknd"></div> выходной день</div>
+    <div class="legend-item"><div class="legend-box work"></div> рабочий день</div>
+  </div>
+
+  <div class="footer">Галочки сохраняются в браузере — каждый открывает и отмечает свои смены</div>
+</div>
+
+<script>
+const workers = ['Ваня', 'Веня', 'Алина'];
+const avatarCls = ['av0','av1','av2'];
+const initials = ['В','В','А'];
+let currentMonth = 0;
+const months = [
+  { name: 'Май 2025', year: 2025, month: 4 },
+  { name: 'Июнь 2025', year: 2025, month: 5 }
+];
+
+function getDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+function getWeekDay(year, month, day) {
+  return new Date(year, month, day).getDay();
+}
+const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+function loadState(mIdx) {
+  try {
+    const raw = localStorage.getItem('shifts_' + mIdx);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+function saveState(mIdx, state) {
+  try { localStorage.setItem('shifts_' + mIdx, JSON.stringify(state)); } catch(e) {}
+}
+
+function buildTable(mIdx) {
+  const m = months[mIdx];
+  const days = getDaysInMonth(m.year, m.month);
+  const state = loadState(mIdx);
+  const table = document.getElementById('scheduleTable');
+  let html = '<thead><tr><th class="name-col">Работник</th>';
+  for (let d = 1; d <= days; d++) {
+    const wd = getWeekDay(m.year, m.month, d);
+    const isWknd = wd === 0 || wd === 6;
+    html += `<th${isWknd?' class="weekend"':''}><div class="day-num">${dayNames[wd]}</div><div class="day-d">${d}</div></th>`;
+  }
+  html += '</tr></thead><tbody>';
+  workers.forEach((w, wi) => {
+    html += `<tr><td class="name-cell"><div class="worker-name"><div class="avatar ${avatarCls[wi]}">${initials[wi]}</div>${w}</div></td>`;
+    for (let d = 1; d <= days; d++) {
+      const wd = getWeekDay(m.year, m.month, d);
+      const isWknd = wd === 0 || wd === 6;
+      const key = `${wi}_${d}`;
+      const checked = state[key] ? 'checked' : '';
+      html += `<td class="${isWknd?'weekend':''}"><div class="cb-wrap"><input type="checkbox" ${checked} onchange="toggle(${mIdx},${wi},${d},this)"></div></td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+  updateStats(mIdx);
+}
+
+function toggle(mIdx, wi, d, cb) {
+  const state = loadState(mIdx);
+  const key = `${wi}_${d}`;
+  state[key] = cb.checked;
+  saveState(mIdx, state);
+  updateStats(mIdx);
+}
+
+function updateStats(mIdx) {
+  const m = months[mIdx];
+  const days = getDaysInMonth(m.year, m.month);
+  const state = loadState(mIdx);
+  workers.forEach((w, wi) => {
+    let count = 0;
+    for (let d = 1; d <= days; d++) {
+      if (state[`${wi}_${d}`]) count++;
+    }
+    document.getElementById('s'+wi).textContent = count;
+  });
+}
+
+function switchMonth(idx) {
+  currentMonth = idx;
+  document.querySelectorAll('.month-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  buildTable(idx);
+}
+
+buildTable(0);
+</script>
+</body>
+</html>
